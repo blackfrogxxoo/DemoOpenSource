@@ -7,6 +7,7 @@ import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.KeyEvent;
 import android.view.View;
@@ -18,6 +19,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.bitsmelody.demoopensource.event.MessageEvent;
+import com.bitsmelody.demoopensource.event.RefreshEvent;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -43,7 +45,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         EventBus.getDefault().register(this);
-
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -71,8 +72,20 @@ public class MainActivity extends AppCompatActivity {
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                EventBus.getDefault().post(new MessageEvent("deleteByKey_" + id));
+            public void onItemClick(AdapterView<?> parent, View view, int position, final long id) {
+                new Thread() {
+                    @Override
+                    public void run() {
+                        synchronized (this) {
+                            try {
+                                this.wait(1000);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        EventBus.getDefault().post(new MessageEvent("remove_" + id));
+                    }
+                }.start();
             }
         });
 
@@ -81,18 +94,24 @@ public class MainActivity extends AppCompatActivity {
         btnAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                addNote();
+                EventBus.getDefault().post(new MessageEvent("add_" + editText.getText().toString()));
             }
         });
 
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
+    @Subscribe(threadMode = ThreadMode.BACKGROUND)
     public void onDeleteEvent(MessageEvent event) {
+        if (!event.message.startsWith("remove")) {
+            return;
+        }
         String[] message = event.message.split("_");
+        if (message.length < 2) {
+            return;
+        }
         int id = Integer.parseInt(message[1]);
         noteDao.deleteByKey((long) id);
-        cursor.requery();
+        EventBus.getDefault().post(new RefreshEvent());
     }
 
 
@@ -102,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    addNote();
+                    EventBus.getDefault().post(new MessageEvent("add_" + v.getText().toString()));
                     return true;
                 }
                 return false;
@@ -129,15 +148,29 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void addNote() {
-        String noteText = editText.getText().toString();
-        editText.setText("");
+    @Subscribe(threadMode = ThreadMode.BACKGROUND)
+    public void addNote(MessageEvent event) {
+        if (!event.message.startsWith("add")) {
+            return;
+        }
+
+        String[] message = event.message.split("_");
+        if (message.length < 2) {
+            return;
+        }
+        String noteText = message[1];
 
         final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String comment = "Added on " + sdf.format(new Date());
         Note note = new Note(null, noteText, comment, new Date());
         noteDao.insert(note);
 
+        EventBus.getDefault().post(new RefreshEvent());
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void refreshDB(RefreshEvent event) {
+        editText.setText("");
         cursor.requery();
     }
 }
