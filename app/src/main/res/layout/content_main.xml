@@ -13,8 +13,23 @@
     tools:showIn="@layout/activity_main"
     tools:context="com.bitsmelody.demoopensource.MainActivity">
 
-    <TextView
-        android:text="Hello World!"
+    <Button
+        android:id="@+id/btn_add"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:enabled="false"
+        android:layout_alignParentRight="true"
+        android:text="Add"/>
+
+    <EditText
+        android:id="@+id/edit_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_toLeftOf="@+id/btn_add"/>
+
+    <ListView
+        android:id="@+id/list_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/btn_add"/>
 </RelativeLayout>
