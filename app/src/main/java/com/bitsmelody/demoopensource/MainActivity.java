@@ -1,22 +1,15 @@
 package com.bitsmelody.demoopensource;
 
-import android.app.Activity;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.text.format.DateFormat;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
 import android.widget.Button;
@@ -24,15 +17,8 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.bitsmelody.demoopensource.DaoMaster;
-import com.bitsmelody.demoopensource.DaoSession;
-import com.bitsmelody.demoopensource.Note;
-import com.bitsmelody.demoopensource.NoteDao;
-
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
-import de.greenrobot.dao.AbstractDaoSession;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -56,10 +42,11 @@ public class MainActivity extends AppCompatActivity {
         editText = (EditText) findViewById(R.id.edit_text);
         btnAdd = (Button) findViewById(R.id.btn_add);
 
-        DaoMaster.DevOpenHelper helper = new DaoMaster.DevOpenHelper(this, "notes-db", null);
-        db = helper.getWritableDatabase();
-        daoMaster = new DaoMaster(db);
-        daoSession = daoMaster.newSession();
+        //DaoMaster.DevOpenHelper helper = new DaoMaster.DevOpenHelper(this, "notes-db", null);
+        //db = helper.getWritableDatabase();
+        daoMaster = App.getDaoMaster();
+        daoSession = App.getDaoSession();
+        db = daoMaster.getDatabase();
         noteDao = daoSession.getNoteDao();
 
         String textColumn = NoteDao.Properties.Text.columnName;

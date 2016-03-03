@@ -3,7 +3,7 @@
     package="com.bitsmelody.demoopensource" >
 
     <application
-        android:name=".MyApplicatioin"
+        android:name=".App"
         android:allowBackup="true"
         android:icon="@mipmap/open_source"
         android:label="@string/app_name"
