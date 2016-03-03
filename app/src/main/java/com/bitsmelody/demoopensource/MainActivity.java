@@ -24,10 +24,10 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.bitsmelody.demoopensource.db.DaoMaster;
-import com.bitsmelody.demoopensource.db.DaoSession;
-import com.bitsmelody.demoopensource.entity.Note;
-import com.bitsmelody.demoopensource.entity.NoteDao;
+import com.bitsmelody.demoopensource.DaoMaster;
+import com.bitsmelody.demoopensource.DaoSession;
+import com.bitsmelody.demoopensource.Note;
+import com.bitsmelody.demoopensource.NoteDao;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -37,13 +37,13 @@ import de.greenrobot.dao.AbstractDaoSession;
 public class MainActivity extends AppCompatActivity {
 
     private SQLiteDatabase db;
+
+    private EditText editText;
+    private Button btnAdd;
     private DaoMaster daoMaster;
     private DaoSession daoSession;
     private NoteDao noteDao;
     private Cursor cursor;
-
-    private EditText editText;
-    private Button btnAdd;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,10 +62,10 @@ public class MainActivity extends AppCompatActivity {
         daoSession = daoMaster.newSession();
         noteDao = daoSession.getNoteDao();
 
-        String textColumn = NoteDao.Properties.TEXT.columnName;
+        String textColumn = NoteDao.Properties.Text.columnName;
         String orderBy = textColumn + " COLLATE LOCALIZED ASC";
         cursor = db.query(noteDao.getTablename(), noteDao.getAllColumns(), null, null, null, null, orderBy);
-        String[] from = {textColumn, NoteDao.Properties.COMMENT.columnName};
+        String[] from = {textColumn, NoteDao.Properties.Comment.columnName};
         int[] to = {android.R.id.text1, android.R.id.text2};
 
         SimpleCursorAdapter adapter = new SimpleCursorAdapter(this,
