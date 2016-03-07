@@ -9,6 +9,7 @@ import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -19,24 +20,40 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.bitsmelody.demoopensource.event.MessageEvent;
+import com.bitsmelody.demoopensource.event.NetworkEvent;
 import com.bitsmelody.demoopensource.event.RefreshEvent;
+import com.bitsmelody.demoopensource.retrofit.SimpleService;
+import com.facebook.stetho.okhttp3.StethoInterceptor;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.SubscriberExceptionEvent;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+
+import okhttp3.OkHttpClient;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = MainActivity.class.getSimpleName();
     private SQLiteDatabase db;
 
     private EditText editText;
     private Button btnAdd;
     private DaoMaster daoMaster;
     private DaoSession daoSession;
-    private NoteDao noteDao;
+    private ContributorDao noteDao;
     private Cursor cursor;
 
     @Override
@@ -53,17 +70,15 @@ public class MainActivity extends AppCompatActivity {
         editText = (EditText) findViewById(R.id.edit_text);
         btnAdd = (Button) findViewById(R.id.btn_add);
 
-        //DaoMaster.DevOpenHelper helper = new DaoMaster.DevOpenHelper(this, "notes-db", null);
-        //db = helper.getWritableDatabase();
         daoMaster = App.getDaoMaster();
         daoSession = App.getDaoSession();
         db = daoMaster.getDatabase();
-        noteDao = daoSession.getNoteDao();
+        noteDao = daoSession.getContributorDao();
 
-        String textColumn = NoteDao.Properties.Text.columnName;
-        String orderBy = textColumn + " COLLATE LOCALIZED ASC";
+        String loginColumns = ContributorDao.Properties.Login.columnName;
+        String orderBy = loginColumns + " COLLATE LOCALIZED ASC";
         cursor = db.query(noteDao.getTablename(), noteDao.getAllColumns(), null, null, null, null, orderBy);
-        String[] from = {textColumn, NoteDao.Properties.Comment.columnName};
+        String[] from = {loginColumns, ContributorDao.Properties.Contributions.columnName};
         int[] to = {android.R.id.text1, android.R.id.text2};
 
         SimpleCursorAdapter adapter = new SimpleCursorAdapter(this,
@@ -95,8 +110,54 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 EventBus.getDefault().post(new MessageEvent("add_" + editText.getText().toString()));
+                EventBus.getDefault().post(new NetworkEvent());
             }
         });
+
+
+    }
+
+
+    @Subscribe(threadMode = ThreadMode.ASYNC)
+    public void initRetrofit(NetworkEvent event) {
+        String BASE_URL = "https://api.github.com";
+        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").create();
+
+        OkHttpClient client = new OkHttpClient();
+//        client.networkInterceptors().add(new StethoInterceptor());
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .client(client)
+                .build();
+
+        SimpleService.GitHub gitHubService = retrofit.create(SimpleService.GitHub.class);
+        Call<List<SimpleService.Contributor>> call = gitHubService.contributors("square", "retrofit");
+
+//        call.enqueue(new Callback<List<SimpleService.Contributor>>() {
+//            @Override
+//            public void onResponse(Call<List<SimpleService.Contributor>> call, Response<List<SimpleService.Contributor>> response) {
+//
+//            }
+//
+//            @Override
+//            public void onFailure(Call<List<SimpleService.Contributor>> call, Throwable t) {
+//
+//            }
+//        });
+
+        try {
+            Response<List<SimpleService.Contributor>> response = call.execute();
+            Log.d(TAG, "response:" + response.body().toString());
+
+            List<SimpleService.Contributor> contributors = response.body();
+            for (SimpleService.Contributor contributor : contributors) {
+                System.out.println(contributor.login + " (" + contributor.contributions + ")");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -112,6 +173,11 @@ public class MainActivity extends AppCompatActivity {
         int id = Integer.parseInt(message[1]);
         noteDao.deleteByKey((long) id);
         EventBus.getDefault().post(new RefreshEvent());
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onEventException(SubscriberExceptionEvent event) {
+
     }
 
 
@@ -158,12 +224,40 @@ public class MainActivity extends AppCompatActivity {
         if (message.length < 2) {
             return;
         }
-        String noteText = message[1];
 
-        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String comment = "Added on " + sdf.format(new Date());
-        Note note = new Note(null, noteText, comment, new Date());
-        noteDao.insert(note);
+        // TODO 网络请求
+        String BASE_URL = "https://api.github.com";
+        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").create();
+
+        OkHttpClient client = new OkHttpClient();
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .client(client)
+                .build();
+
+        SimpleService.GitHub gitHubService = retrofit.create(SimpleService.GitHub.class);
+        Call<List<SimpleService.Contributor>> call = gitHubService.contributors("square", "retrofit");
+        try {
+            Response<List<SimpleService.Contributor>> response = call.execute();
+            Log.d(TAG, "response:" + response.body().toString());
+
+            List<SimpleService.Contributor> contributors = response.body();
+            for (SimpleService.Contributor contributor : contributors) {
+                System.out.println(contributor.login + " (" + contributor.contributions + ")");
+
+                Contributor note = new Contributor(null, contributor.login, contributor.contributions);
+                try{
+                    noteDao.insert(note);
+                } catch (Exception e) {
+
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
         EventBus.getDefault().post(new RefreshEvent());
     }
