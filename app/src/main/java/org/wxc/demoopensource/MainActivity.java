@@ -1,4 +1,4 @@
-package com.bitsmelody.demoopensource;
+package org.wxc.demoopensource;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -7,7 +7,6 @@ import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
-import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -19,11 +18,6 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.bitsmelody.demoopensource.event.MessageEvent;
-import com.bitsmelody.demoopensource.event.NetworkEvent;
-import com.bitsmelody.demoopensource.event.RefreshEvent;
-import com.bitsmelody.demoopensource.retrofit.SimpleService;
-import com.facebook.stetho.okhttp3.StethoInterceptor;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -32,14 +26,14 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.SubscriberExceptionEvent;
 import org.greenrobot.eventbus.ThreadMode;
 
+import org.wxc.demoopensource.event.*;
+import org.wxc.demoopensource.retrofit.*;
+
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 
 import okhttp3.OkHttpClient;
 import retrofit2.Call;
-import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -53,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnAdd;
     private DaoMaster daoMaster;
     private DaoSession daoSession;
-    private ContributorDao noteDao;
+    private ContributorDao contributorDao;
     private Cursor cursor;
 
     @Override
@@ -73,11 +67,11 @@ public class MainActivity extends AppCompatActivity {
         daoMaster = App.getDaoMaster();
         daoSession = App.getDaoSession();
         db = daoMaster.getDatabase();
-        noteDao = daoSession.getContributorDao();
+        contributorDao = daoSession.getContributorDao();
 
         String loginColumns = ContributorDao.Properties.Login.columnName;
         String orderBy = loginColumns + " COLLATE LOCALIZED ASC";
-        cursor = db.query(noteDao.getTablename(), noteDao.getAllColumns(), null, null, null, null, orderBy);
+        cursor = db.query(contributorDao.getTablename(), contributorDao.getAllColumns(), null, null, null, null, orderBy);
         String[] from = {loginColumns, ContributorDao.Properties.Contributions.columnName};
         int[] to = {android.R.id.text1, android.R.id.text2};
 
@@ -171,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         int id = Integer.parseInt(message[1]);
-        noteDao.deleteByKey((long) id);
+        contributorDao.deleteByKey((long) id);
         EventBus.getDefault().post(new RefreshEvent());
     }
 
@@ -225,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // TODO 网络请求
+        // 网络请求
         String BASE_URL = "https://api.github.com";
         Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").create();
 
@@ -247,9 +241,9 @@ public class MainActivity extends AppCompatActivity {
             for (SimpleService.Contributor contributor : contributors) {
                 System.out.println(contributor.login + " (" + contributor.contributions + ")");
 
-                Contributor note = new Contributor(null, contributor.login, contributor.contributions);
+                Contributor entity = new Contributor(null, contributor.login, contributor.contributions);
                 try{
-                    noteDao.insert(note);
+                    contributorDao.insert(entity);
                 } catch (Exception e) {
 
                 }

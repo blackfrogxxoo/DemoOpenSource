@@ -1,10 +1,8 @@
-package com.bitsmelody.demoopensource;
+package org.wxc.demoopensource;
 
 import android.app.Application;
 
 import com.facebook.stetho.Stetho;
-
-import org.greenrobot.eventbus.EventBus;
 
 /**
  * Created by black on 2016/3/2.

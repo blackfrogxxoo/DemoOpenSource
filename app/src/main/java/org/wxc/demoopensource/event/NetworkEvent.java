@@ -1,4 +1,4 @@
-package com.bitsmelody.demoopensource.event;
+package org.wxc.demoopensource.event;
 
 /**
  * Created by black on 2016/3/4.
